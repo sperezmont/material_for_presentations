@@ -1,1 +1,1 @@
-
+All the present schemes were made by me (Sergio Pérez-Montero) based on the papers were these mechanisms are described (i. e.  in the papaer referenced by the file name). *Credit is appreciated if used*
