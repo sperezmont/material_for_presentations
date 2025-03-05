@@ -1,3 +1,5 @@
+If used, crediting is recommended!
+
 * **map_ANT-16KM_RTOPO-2.0.1.pdf**                           2022.01.24  **Map of Antarctica**, 16km data from https://doi.pangaea.de/10.1594/PANGAEA.856844
 * **batmap_ANT-16KM_RTOPO-2.0.1.pdf**                        2022.01.24  **Bathymetry map of Antarctica**, 16km data from https://doi.pangaea.de/10.1594/PANGAEA.856844
 * **map_ANT-16KM_TOPO-BedMachine.pdf**                       2022.01.25  **Map of Antarctica**, 16km data from 
