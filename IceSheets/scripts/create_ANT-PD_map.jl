@@ -1,6 +1,6 @@
 include("map_tools.jl")
 
-dftopo = NCDataset("/home/sergio/entra/ice_data/Greenland/GRL-16KM/GRL-16KM_TOPO-RTOPO-2.0.1.nc")
+dftopo = NCDataset("/home/sergio/entra/ice_data/Antarctica/ANT-16KM/ANT-16KM_TOPO-RTOPO-2.0.1.nc")
  
 # Colormaps
 colors = :bukavu
@@ -14,7 +14,7 @@ cmap_ice = cgrad(colors,  round.((levels_ice .- levels_ice[1]) ./ abs(levels_ice
 
 # Plots
 set_theme!(theme_latexfonts(), fontsize=15)
-fig = Figure(resolution=(500, 600))
+fig = Figure(resolution=(500, 500))
 ax = Axis(fig[1, 1],aspect=DataAspect())
 hidedecorations!(ax)
 bat = heatmap!(ax, dftopo["z_bed"], colormap=cmap_bat, colorrange=(levels_bat[1], levels_bat[end]), highclip=:white, lowclip=:grey10)
@@ -23,11 +23,11 @@ Colorbar(fig[1, 2], bat, height=Relative(2/6), label="Bathymetry (m)",
     #    ticks=([0, 1, 2, 3, 4], convert_strings_to_latex([L"0$\,$", L"10\,m$\,$", L"100\,m$\,$", L"1\,km$\,$", L"10\,km$\,$"])),
         vertical=true, flipaxis = true)
 resize_to_layout!(fig)
-save("./IceSheets/batmap_PD-GRL-16KM_TOPO_RTOPO-2.0.1_v01.pdf", fig)
+save("./IceSheets/batmap_PD-ANT-16KM_TOPO_RTOPO-2.0.1_v01.pdf", fig)
 
 # Plots
 set_theme!(theme_latexfonts(), fontsize=15)
-fig = Figure(resolution=(500, 600))
+fig = Figure(resolution=(500, 500))
 ax = Axis(fig[1:2, 1],aspect=DataAspect())
 hidedecorations!(ax)
 bat = heatmap!(ax, dftopo["z_bed"], colormap=cmap_bat, colorrange=(levels_bat[1], levels_bat[end]), highclip=:white, lowclip=:grey10)
@@ -40,6 +40,5 @@ Colorbar(fig[2, 2], ice, height=Relative(2/3), label="Ice thickness (m)",
 #    ticks=([0, 1, 2, 3, 4], convert_strings_to_latex([L"0$\,$", L"10\,m$\,$", L"100\,m$\,$", L"1\,km$\,$", L"10\,km$\,$"])),
     vertical=true, flipaxis = true)
 # resize_to_layout!(fig)
-rowgap!(fig.layout, 0.0)
-save("./IceSheets/map_PD-GRL-16KM_TOPO_RTOPO-2.0.1_v01.pdf", fig)
+save("./IceSheets/map_PD-ANT-16KM_TOPO_RTOPO-2.0.1_v01.pdf", fig)
 
