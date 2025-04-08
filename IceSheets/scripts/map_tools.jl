@@ -31,6 +31,20 @@ end
 # Functions
 cmap(colors, levels, transp) = cgrad(colors,  round.((levels .- levels[1]) ./ abs(levels[1] - levels[end]), sigdigits=3), categorical=true, alpha=transp)
 
+function create_contour(IS::IceSheet, ice_thr::Real)
+    df = NCDataset(IS.df_path)
+    set_theme!(theme_latexfonts(), fontsize=15)
+    fig = Figure(resolution=(500, 500))
+    ax = Axis(fig[1:2, 1],aspect=DataAspect(), backgroundcolor=:transparent)
+    hidedecorations!(ax)
+    hidespines!(ax)
+    contour!(ax, df[IS.ice_var][:, :, IS.ice_time_index], color=:black, levels=[ice_thr])
+    rowgap!(fig.layout, 0.0)
+    save("./IceSheets/contour_$(IS.time_spec)-$(IS.grid_spec)-$(IS.domain)_$(IS.version_spec).png", fig)
+
+    return
+end
+
 function create_map(IS::IceSheet, levels_bat, cmap_bat, levels_ice, cmap_ice)
     df = NCDataset(IS.df_path)
     set_theme!(theme_latexfonts(), fontsize=15)
