@@ -8,7 +8,7 @@ gris16kmPDRtopo = IceSheet(df_path = "/home/sergio/entra/ice_data/Greenland/GRL-
                            version_spec = "v01",
                            )
 
-create_contour(gris16kmPDRtopo, 10.0)
+create_contour(gris16kmPDRtopo, 100.0)
 create_map(gris16kmPDRtopo, levels_bat_GrIS, cmap(colors_bat, levels_bat_GrIS, 1.0), levels_ice_GrIS, cmap(colors_ice, levels_ice_GrIS, 1.0))
 create_batmap(gris16kmPDRtopo, levels_bat_GrIS, cmap(colors_bat, levels_bat_GrIS, 1.0))
 
@@ -20,7 +20,7 @@ ais16kmPDRtopo = IceSheet(df_path = "/home/sergio/entra/ice_data/Antarctica/ANT-
                            version_spec = "v01",
                            )
 
-create_contour(ais16kmPDRtopo, 10.0)
+create_contour(ais16kmPDRtopo, 100.0)
 create_map(ais16kmPDRtopo, levels_bat_ANT, cmap(colors_bat, levels_bat_ANT, 1.0), levels_ice_ANT, cmap(colors_ice, levels_ice_ANT, 1.0))
 create_batmap(ais16kmPDRtopo, levels_bat_ANT, cmap(colors_bat, levels_bat_ANT, 1.0))
 
