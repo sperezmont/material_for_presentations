@@ -79,3 +79,13 @@ function create_batmap(IS::IceSheet, levels_bat, cmap_bat)
     return
 end
 
+function create_transect(IS::IceSheet, x1, y1, x2, y2)
+    df = NCDataset(IS.df_path)
+
+    set_theme!(theme_latexfonts(), fontsize=15)
+
+    fig = Figure(resolution=(500, 500))
+    ax = Axis(fig[1, 1],aspect=DataAspect())
+
+
+end
