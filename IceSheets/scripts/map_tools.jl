@@ -79,13 +79,18 @@ function create_batmap(IS::IceSheet, levels_bat, cmap_bat)
     return
 end
 
-function create_transect(IS::IceSheet, x1, y1, x2, y2)
+function create_3D_map(IS::IceSheet, levels_bat, cmap_bat, levels_ice, cmap_ice; aspect=(1, 1, 0.25), azimuth=1.8π, elevation=0.15π)
     df = NCDataset(IS.df_path)
-
     set_theme!(theme_latexfonts(), fontsize=15)
+    fig = Figure()
+    ax = Axis3(fig[1:2, 1], aspect=aspect, azimuth=azimuth, elevation=elevation)
+    hidespines!(ax)
+    hidedecorations!(ax)
+    bat = surface!(ax, df["x2D"], df["y2D"], df[IS.topo_var][:, :, IS.topo_time_index], colormap=cmap_bat, colorrange=(levels_bat[1], levels_bat[end]), highclip=:white, lowclip=:grey10)
+    ice = surface!(ax, df["x2D"], df["y2D"], df[IS.ice_var][:, :, IS.ice_time_index], colormap=cmap_ice, colorrange=(levels_ice[1], levels_ice[end]), lowclip=:transparent, highclip=:white)
+    rowgap!(fig.layout, 0.0)
+    # save("./IceSheets/map3D_$(IS.time_spec)-$(IS.grid_spec)-$(IS.domain)_$(IS.version_spec).pdf", fig)
+    save("./IceSheets/map3D_$(IS.time_spec)-$(IS.grid_spec)-$(IS.domain)_$(IS.version_spec).png", fig)
 
-    fig = Figure(resolution=(500, 500))
-    ax = Axis(fig[1, 1],aspect=DataAspect())
-
-
+    return
 end
