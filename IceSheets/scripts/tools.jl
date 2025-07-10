@@ -121,7 +121,7 @@ function create_yelmox_ice_flux_animation(path2run::String, plotname::String, ba
     sf = Observable(Base.Fix2(f, 0.0f0))
 
     # Set up animation
-    # set_theme!(theme_latexfonts())
+    set_theme!(theme_latexfonts())
     fig = Figure(size=figsize, fontsize=fs)
 
     ax = Axis(fig[1, 1], aspect=DataAspect(), title=t_obs)
@@ -145,14 +145,14 @@ function create_yelmox_ice_flux_animation(path2run::String, plotname::String, ba
 
     colgap!(fig.layout, 0.0)
     
-    save("plots/$(animation_name).png", fig)
+    save("$(plotname).png", fig)
 
     # Create animation
-    record(fig, "plots/$(animation_name)", 1:n_2D, framerate = frmrt) do i
+    record(fig, "$(plotname)", 1:n_2D, framerate = frmrt) do i
         k[] = i
         sf[] = Base.Fix2(f, time_2D[i])
     end
-    rm("plots/$(animation_name).png")
+    rm("$(plotname).png")
     return nothing
 
 end
