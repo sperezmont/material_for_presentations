@@ -11,8 +11,8 @@ cmap(colors, levels, transp) = cgrad(colors,  round.((levels .- levels[1]) ./ ab
 This function calculates the trajectory followed by a particle for
 a given initial position `(x0, y0)`, a domain `(x,y)`, a velocity field `(u, v)` and a mask `H` during `times`
 """
-function calculate_trajectory(x0::Float32, y0::Float32, x::Array, y::Array, u::Array, v::Array, H::Array, times::Array)
-    traj = [(x0, y0)]
+function calculate_trajectory(x0::Float32, y0::Float32, x::Array, y::Array, u::Array, v::Array, H::Array, times::Array; reset_traj::Bool=true)
+    traj, vels = [(x0, y0)], []
 
     margins_mask = copy(H)
     margins_mask[H .< 10.0] .= 0.0
@@ -24,6 +24,7 @@ function calculate_trajectory(x0::Float32, y0::Float32, x::Array, y::Array, u::A
     H_itp = extrapolate(interpolate((x, y, times), H, Gridded(Linear())), 0.0)
 
     xt, yt = x0, y0
+    push!(vels, sqrt(u_itp(x0, y0, 0)^2 + v_itp(x0, y0, 0)^2))
     for i in 1:length(times)-1    # r(t+1) = r(t) + v(t)*dt
         # Calculate current time, dt and velocities in (x, y, t)
         t = times[i]
@@ -38,6 +39,7 @@ function calculate_trajectory(x0::Float32, y0::Float32, x::Array, y::Array, u::A
             ut = u_itp(xt, yt, t)
             vt = v_itp(xt, yt, t)
         end
+        push!(vels, sqrt(ut^2 + vt^2))
 
         # Calculate new position (xtp1, ytp1, t+1)
         xtp1 = xt + ut*dt
@@ -45,20 +47,20 @@ function calculate_trajectory(x0::Float32, y0::Float32, x::Array, y::Array, u::A
 
         # Check if there is ice
         Htp1 = H_itp(xtp1, ytp1, tp1)
-        if Htp1 < 10.0    # the particle does not move
+        if Htp1 < 1.0    # the particle does not move
             xtp1, ytp1 = xt, yt            
         end
 
         # Store point (xtp1, ytp1)
         push!(traj, (xtp1, ytp1))
         
-        # if Htp1 < 10.0    # Reset xt, yt to initial conditions
-        #     xtp1, ytp1 = x0, y0            
-        # end
+        if (reset_traj) && (Htp1 < 1.0)    # Reset xt, yt to initial conditions
+            xtp1, ytp1 = x0, y0            
+        end
         xt, yt = xtp1, ytp1
     end
 
-    return traj
+    return traj, vels
 
 end
 
@@ -70,6 +72,7 @@ function calculate_initial_positions(n, x, y, field, thr)
         indexes = [argmax(field)]
     else
         indexes = findall( x -> x>=thr, field)
+        indexes = indexes[sortperm(field[indexes], rev=true)]  # sort the indexes by their value
         indexes = indexes[Int.(floor.(range(1, stop=length(indexes), length=n)))]
     end
     return [(x[indexes[i][1]], y[indexes[i][2]]) for i in eachindex(indexes)]
@@ -78,17 +81,32 @@ end
 """
 This function creates `plotname` animation from a YelmoX experiment located in `path2run`
 """
-function create_yelmox_ice_flux_animation(path2run::String, plotname::String, bat_cmap_kwargs, ice_cmap_kwargs, ice_cmap_aux_kwargs; frmrt=5, n=20, thr=2500, figsize=(900, 800), fs=22, lw=1, rw=0.45, grdsz=(48, 48), maxsteps=150, stepsize=2)
+function create_yelmox_ice_flux_animation(path2run::String, plotname::String, bat_cmap_kwargs, ice_cmap_kwargs, ice_cmap_aux_kwargs; frmrt=5, n=20, thr=2500, figsize=(900, 800), fs=22, lw=1, rw=0.45, grdsz=(48, 48), density=1.0, maxsteps=150, stepsize=2, reset_traj=true, static_run=false, static_time=1)
     # Load data
     data = NCDataset(path2data)
+    x, y = view(data["xc"])[:], view(data["yc"])[:]
 
     # Load some variables
-    time_2D = view(data["time"])
-    x, y = view(data["xc"])[:], view(data["yc"])[:]
-    H_ice = view(data["H_ice"])
-    z_bed = view(data["z_bed"])
-    ux_s = view(data["ux_s"])
-    uy_s = view(data["uy_s"])
+    if static_run
+        time_2D = collect(Float32, 0:1:100)  # fixed
+        times2use = static_time
+        H_ice = Array{Float32}(undef, length(x), length(y), length(time_2D)) 
+        z_bed = Array{Float32}(undef, length(x), length(y), length(time_2D)) 
+        ux_s = Array{Float32}(undef, length(x), length(y), length(time_2D)) 
+        uy_s = Array{Float32}(undef, length(x), length(y), length(time_2D)) 
+
+        H_ice[:, :, :] .= data["H_ice"][:, :, static_time]
+        z_bed[:, :, :] .= data["z_bed"][:, :, static_time]
+        ux_s[:, :, :] .= data["ux_s"][:, :, static_time]
+        uy_s[:, :, :] .= data["uy_s"][:, :, static_time]
+    else
+        time_2D = view(data["time"])
+        times2use = range(1, stop=Int(length(time_2D)), step=1)
+        H_ice = view(data["H_ice"])
+        z_bed = view(data["z_bed"])
+        ux_s = view(data["ux_s"])
+        uy_s = view(data["uy_s"])
+    end
 
     # Define some local variables
     n_2D = length(time_2D)
@@ -99,20 +117,26 @@ function create_yelmox_ice_flux_animation(path2run::String, plotname::String, ba
                 lowclip=:transparent, highclip=uxy_s_map4[end])
 
     # Calculate r(x,y,t) of n particles
-    rxy = calculate_initial_positions(n, x, y, H_ice[:, :, 1], thr)
+    rxy = calculate_initial_positions(n, x, y, z_srf[:, :, static_time], thr)
     particle_tracks = Array{Tuple{Float32, Float32}}(undef, length(rxy), length(time_2D)) 
+    particle_velocities = Array{Float32}(undef, length(rxy), length(time_2D)) 
     for i in eachindex(rxy)
-        particle_tracks[i, :] = calculate_trajectory(rxy[i][1], rxy[i][2], x, y, ux_s[:,:,:], uy_s[:, :, :], H_ice[:, :, :], time_2D[:])
+        particle_tracks[i, :], particle_velocities[i, :] = calculate_trajectory(rxy[i][1], rxy[i][2], x, y, ux_s[:,:,:], uy_s[:, :, :], H_ice[:, :, :], time_2D[:], reset_traj=reset_traj)
     end
 
     # Define the observables to let Julia recognize the time dimension
-    k = Observable(1)   # time index
+    if static_run
+        k = Observable(static_time)
+    else
+        k = Observable(1)   # time index
+    end
 
     H_ice_obs = @lift(H_ice[:, :, $k])
     z_bed_obs = @lift(z_bed[:, :, $k])
     z_srf_obs = @lift(z_srf[:, :, $k])
     t_obs = @lift("t = $(round(time_2D[$k])) yr")
     particle_track_obs = @lift(particle_tracks[:, $k])
+    particle_velocities_obs = @lift(particle_velocities[:, $k])
 
     ux_itp = linear_interpolation((x, y, time_2D[:]), ux_s[:, :, :])    # velocity field interpolators
     uy_itp = linear_interpolation((x, y, time_2D[:]), uy_s[:, :, :])
@@ -132,16 +156,20 @@ function create_yelmox_ice_flux_animation(path2run::String, plotname::String, ba
     z_hm = heatmap!(ax, x, y, z_bed_obs; bat_cmap_kwargs...)
     heatmap!(ax, x, y, H_ice_obs; ice_cmap_kwargs...)
     H_hm = heatmap!(ax, x, y, H_ice[:, :, 1] .* NaN; ice_cmap_aux_kwargs...)
-    strm = streamplot!(ax, sf, x[1]..x[end], y[1]..y[end], gridsize=grdsz, linewidth=lw, arrow_size=0.0, maxsteps=maxsteps, stepsize=stepsize, colormap=[:black])
-    scatter!(ax, particle_track_obs, color=:black)
+    contour!(ax, x, y, z_srf_obs, color=:grey30, levels=0:500:4000, linestyle=:dashdot)
+    streamplot!(ax, sf, x[1]..x[end], y[1]..y[end], gridsize=grdsz, linewidth=lw, arrow_size=0.0, maxsteps=maxsteps, stepsize=stepsize, density=density, colormap=[:black])
+    
+    uxy_s_map4 = cgrad(:thermal, range(0, stop = 1, length = 11), categorical=true)
+    scatter!(ax, particle_track_obs, color=particle_velocities_obs, colormap=uxy_s_map4)
+    lin_umap=(colormap = :thermal, colorrange=(1f-8, 1000), highclip=uxy_s_map4[end])
 
     Colorbar(fig[1, 2], z_hm, vertical = true, flipaxis = true, height = Relative(rw),
         valign = :top, label = "Bed elevation (m)")
     Colorbar(fig[1, 2], H_hm, vertical = true, flipaxis = true, height = Relative(rw),
         valign = :bottom, label = "Ice thickness (m)")
 
-    # Colorbar(fig[1, 3], strm, vertical = true, flipaxis = true, height = Relative(rw),
-    #     valign = :bottom, label = "Surface velocity (m/yr)", ticks = 0:200:1000)
+    Colorbar(fig[1, 3], vertical = true, flipaxis = true, height = Relative(rw),
+        valign = :bottom, label = "Surface velocity (m/yr)", ticks = 0:200:1000; lin_umap...)
 
     colgap!(fig.layout, 0.0)
     
@@ -149,8 +177,13 @@ function create_yelmox_ice_flux_animation(path2run::String, plotname::String, ba
 
     # Create animation
     record(fig, "$(plotname)", 1:n_2D, framerate = frmrt) do i
+        # if static_run
+        #     k[] = static_time
+        #     sf[] = Base.Fix2(f, time_2D[i])
+        # else
         k[] = i
         sf[] = Base.Fix2(f, time_2D[i])
+        # end
     end
     rm("$(plotname).png")
     return nothing
